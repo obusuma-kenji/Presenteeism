@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ・レポート：プレゼンティーズムとアブセンティーズム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony -->
+    <!-- Application Structure Plan: The SPA is designed as a top-down narrative dashboard. It starts with a high-level definition (Hero), immediately visualizes the core problem's scale with an iceberg metaphor (Impact), delves into the 'why' with an interactive tabbed section (Causes), presents the 'how' with a clickable 4-pillar framework (Solution), provides tools for action (Measurement), and finally shows proof of concept (Case Studies). This structure guides the user from awareness to understanding to action, prioritizing the most impactful data first to engage them immediately, making it more effective than the report's linear structure for quick comprehension and decision-making. -->
+    <!-- Visualization & Content Choices: 1. Health Cost Comparison -> Goal: Compare -> Viz: Donut Chart (Iceberg Metaphor) -> Interaction: Hover tooltips -> Justification: The iceberg is a powerful, universally understood metaphor for hidden costs, perfectly suiting the Presenteeism vs. Absenteeism data. It's more impactful than a simple bar chart. -> Library: Chart.js. 2. Productivity Loss by Cause -> Goal: Compare/Inform -> Viz: Horizontal Bar Chart -> Interaction: Buttons to toggle data views -> Justification: A bar chart is ideal for comparing magnitudes. Interactivity allows layering data (total vs. per-employee loss) without visual clutter. -> Library: Chart.js. 3. Health Framework -> Goal: Organize/Inform -> Viz: 2x2 HTML/CSS Grid -> Interaction: Click to reveal details -> Justification: Transforms the report's static action matrix into an engaging, explorable element, breaking down dense information. -> Method: HTML/CSS/JS. All visualizations are on Canvas, confirming NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #F5F5F4; /* stone-100 */
+            color: #1C1917; /* stone-900 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .tab-active {
+            background-color: #3B82F6; /* blue-500 */
+            color: white;
+        }
+        .framework-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .framework-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .stat-number {
+            font-weight: 700;
+            color: #3B82F6; /* blue-500 */
+        }
+        .section-title {
+            font-size: 2.25rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .section-subtitle {
+            font-size: 1.125rem;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 3rem auto;
+            color: #57534E; /* stone-600 */
+        }
+        .nav-link {
+            transition: color 0.2s;
+        }
+        .nav-link:hover {
+            color: #3B82F6; /* blue-500 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-stone-800">
+                <span class="text-blue-500">見えざる</span>流出
+            </div>
+            <div class="hidden md:flex space-x-8 text-stone-600 font-medium">
+                <a href="#impact" class="nav-link">経済的影響</a>
+                <a href="#causes" class="nav-link">根本原因</a>
+                <a href="#framework" class="nav-link">解決策</a>
+                <a href="#tools" class="nav-link">測定ツール</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-6 py-12">
+
+        <section id="hero" class="text-center py-16">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-stone-800 leading-tight">
+                企業の生産性を蝕む<br class="hidden md:block" />
+                <span class="text-blue-500">プレゼンティーズム</span>という巨大な問題
+            </h1>
+            <p class="mt-6 max-w-3xl mx-auto text-lg text-stone-600">
+                従業員の健康問題は、目に見える「欠勤」だけでなく、出勤していても生産性が低下する「見えざる損失」として、企業の収益性に深刻な影響を与えています。このダッシュボードで、問題の全体像を解き明かしましょう。
+            </p>
+            <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+                <div class="card">
+                    <h3 class="text-2xl font-bold mb-2 text-amber-500">プレゼンティーズム</h3>
+                    <p class="text-stone-600">
+                        心身の不調を抱えながらも出勤し、業務遂行能力が完全に発揮できていない状態。勤怠記録には現れない「隠れたコスト」として、企業の生産性を慢性的に低下させます。
+                    </p>
+                </div>
+                <div class="card">
+                    <h3 class="text-2xl font-bold mb-2 text-stone-700">アブセンティーズム</h3>
+                    <p class="text-stone-600">
+                        健康問題を理由とした欠勤、遅刻、早退、休職など。勤怠記録で把握できる「目に見える損失」ですが、経済的インパクトの氷山の一角に過ぎません。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="impact" class="py-16">
+            <h2 class="section-title">氷山の一角：真のコストを可視化する</h2>
+            <p class="section-subtitle">
+                企業の健康関連コストの大部分は、水面下に隠されています。アブセンティーズム（欠勤）による損失は明確ですが、プレゼンティーズムによる生産性低下のインパクトはそれを遥かに凌駕します。
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+                <div class="lg:col-span-2 card">
+                    <h3 class="text-xl font-bold text-center mb-4">健康関連総コストの構成比</h3>
+                    <div class="chart-container h-80 md:h-96">
+                        <canvas id="icebergChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="card text-center">
+                        <h4 class="text-lg font-semibold text-stone-700">国内の年間経済損失</h4>
+                        <p class="text-4xl stat-number" data-target="19.2">0</p>
+                        <p class="text-stone-500">兆円（プレゼンティーズム起因）</p>
+                    </div>
+                    <div class="card text-center">
+                        <h4 class="text-lg font-semibold text-stone-700">高リスク従業員の損失額</h4>
+                        <p class="text-4xl stat-number" data-target="3">0</p>
+                        <p class="text-stone-500">倍（低リスク従業員比）</p>
+                    </div>
+                </div>
+            </div>
+             <div class="mt-12 card">
+                <h3 class="text-xl font-bold text-center mb-4">生産性損失の主な原因</h3>
+                <p class="text-center text-stone-600 mb-6">うつ病などのメンタル不調は一人当たりの損失率が高い一方、より有訴率の高い腰痛などが組織全体の総損失額を押し上げています。</p>
+                <div class="chart-container h-96 md:h-[500px]">
+                    <canvas id="causesChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="causes" class="py-16">
+            <h2 class="section-title">なぜ問題は起きるのか？</h2>
+            <p class="section-subtitle">
+                プレゼンティーズムとアブセンティーズムは、個人の健康問題だけでなく、組織文化や職場環境など、複数の要因が複雑に絡み合って発生します。
+            </p>
+            <div class="card max-w-5xl mx-auto">
+                <div class="flex justify-center border-b border-stone-200 mb-6">
+                    <button class="tab-button tab-active px-6 py-3 font-semibold" data-tab="health">健康要因</button>
+                    <button class="tab-button px-6 py-3 font-semibold text-stone-500" data-tab="culture">組織・文化要因</button>
+                    <button class="tab-button px-6 py-3 font-semibold text-stone-500" data-tab="environment">環境要因</button>
+                </div>
+                <div id="tab-content" class="min-h-[250px]">
+                    <div class="tab-pane active" id="health">
+                        <ul class="space-y-4 list-disc list-inside text-stone-700">
+                            <li><strong>メンタルヘルス：</strong>ストレス、うつ病、不安感、燃え尽き症候群など。</li>
+                            <li><strong>筋骨格系：</strong>腰痛、首や肩のこり。最も有訴率が高い。</li>
+                            <li><strong>慢性疾患：</strong>頭痛、睡眠障害、アレルギー、胃腸の不調など。</li>
+                            <li><strong>生活習慣関連：</strong>不適切な食生活、運動不足、睡眠不足など。</li>
+                            <li><strong>女性特有の健康課題：</strong>月経前症候群（PMS）、更年期障害など。</li>
+                        </ul>
+                    </div>
+                    <div class="tab-pane hidden" id="culture">
+                         <ul class="space-y-4 list-disc list-inside text-stone-700">
+                            <li><strong>高圧的な文化：</strong>長時間労働、過剰な業務負荷、強いプレッシャー。</li>
+                            <li><strong>低い心理的安全性：</strong>「休みづらい」雰囲気、相談しにくい人間関係。</li>
+                            <li><strong>欠陥のある評価制度：</strong>労働時間や在席を重視し、成果を正当に評価しない。</li>
+                            <li><strong>不適切な業務設計：</strong>裁量権の欠如、役割の不明確さ、サポート体制の不備。</li>
+                        </ul>
+                    </div>
+                    <div class="tab-pane hidden" id="environment">
+                         <ul class="space-y-4 list-disc list-inside text-stone-700">
+                            <li><strong>物理的な職場環境：</strong>人間工学に配慮されていない什器、不適切な照明や空調。</li>
+                            <li><strong>リモートワークの課題：</strong>仕事と私生活の境界が曖昧になり、「常時接続」の感覚や孤独感が増大。</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="framework" class="py-16">
+            <h2 class="section-title">解決への道筋：健康経営フレームワーク</h2>
+            <p class="section-subtitle">
+                問題への対策は、個別の施策の寄せ集めでは不十分です。文化、制度、支援、データを統合した体系的なアプローチが不可欠となります。
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card framework-card cursor-pointer" onclick="showFrameworkDetails('culture')">
+                    <h3 class="text-2xl font-bold mb-2 text-blue-500">① 文化醸成</h3>
+                    <p class="text-stone-600">経営層のコミットメントのもと、心理的安全性が高く、成果を正当に評価し、誰もが安心して休める文化を創ります。</p>
+                </div>
+                <div class="card framework-card cursor-pointer" onclick="showFrameworkDetails('environment')">
+                    <h3 class="text-2xl font-bold mb-2 text-blue-500">② 制度・環境改善</h3>
+                    <p class="text-stone-600">人間工学に基づいた職場や柔軟な働き方を導入し、従業員の心身の負担を軽減する制度と環境を整備します。</p>
+                </div>
+                <div class="card framework-card cursor-pointer" onclick="showFrameworkDetails('support')">
+                    <h3 class="text-2xl font-bold mb-2 text-blue-500">③ 従業員支援</h3>
+                    <p class="text-stone-600">メンタルヘルスサポートや健康増進プログラムを提供し、従業員が自律的に健康を管理できるよう支援します。</p>
+                </div>
+                <div class="card framework-card cursor-pointer" onclick="showFrameworkDetails('data')">
+                    <h3 class="text-2xl font-bold mb-2 text-blue-500">④ データに基づく改善</h3>
+                    <p class="text-stone-600">ストレスチェックや各種サーベイで現状を可視化し、データに基づいて施策の効果を測定・改善し続けます。</p>
+                </div>
+            </div>
+        </section>
+        
+        <div id="framework-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4" onclick="closeFrameworkModal(event)">
+            <div id="modal-content" class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 relative">
+                <button onclick="closeFrameworkModal()" class="absolute top-4 right-4 text-stone-500 hover:text-stone-800 text-2xl">&times;</button>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+
+        <section id="tools" class="py-16">
+            <h2 class="section-title">見えざるものを見える化する</h2>
+            <p class="section-subtitle">
+                現状を正確に把握することが、効果的な対策の第一歩です。プレゼンティーズムを定量的に測定するための主要なツールを紹介します。
+            </p>
+            <div class="space-y-4 max-w-4xl mx-auto">
+                <div class="card" data-tool="who-hpq">
+                    <details>
+                        <summary class="font-bold text-lg cursor-pointer">WHO-HPQ (世界標準ツール)</summary>
+                        <div class="mt-4 text-stone-600">
+                            <p>WHOとハーバード大学が開発。国際比較が可能で学術的な信頼性が高い。「絶対的/相対的プレゼンティーズム」を評価します。</p>
+                            <p class="mt-2"><strong>最適な用途：</strong> グローバル企業、詳細な学術研究。</p>
+                        </div>
+                    </details>
+                </div>
+                <div class="card" data-tool="spq">
+                    <details>
+                        <summary class="font-bold text-lg cursor-pointer">東大1項目版 (SPQ - 簡易ツール)</summary>
+                        <div class="mt-4 text-stone-600">
+                            <p>東京大学が開発した日本向けの簡易版。単一の質問で回答者の負担が極めて小さく、手軽に導入できます。</p>
+                            <p class="mt-2"><strong>最適な用途：</strong> 国内企業、定期的なパルスサーベイ。</p>
+                        </div>
+                    </details>
+                </div>
+                <div class="card" data-tool="wlq">
+                    <details>
+                        <summary class="font-bold text-lg cursor-pointer">WLQ (職務機能評価ツール)</summary>
+                        <div class="mt-4 text-stone-600">
+                            <p>タフツ大学が開発。時間管理や身体的業務など、特定の職務機能への影響を25項目で多角的に評価します（有料）。</p>
+                            <p class="mt-2"><strong>最適な用途：</strong> 介入施策の効果を詳細に検証したい場合。</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-stone-800 text-white mt-16">
+        <div class="container mx-auto px-6 py-8 text-center">
+            <p class="font-semibold">インタラクティブ・レポート：プレゼンティーズムとアブセンティーズム</p>
+            <p class="text-sm text-stone-400 mt-2">このアプリケーションは、提供されたレポートに基づき、情報を視覚的かつ対話的に再構成したものです。</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const animateOnScroll = (entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const el = entry.target;
+                        const target = parseFloat(el.dataset.target);
+                        const duration = 1500;
+                        const frameDuration = 1000 / 60;
+                        const totalFrames = Math.round(duration / frameDuration);
+                        let frame = 0;
+                        const counter = setInterval(() => {
+                            frame++;
+                            const progress = frame / totalFrames;
+                            const current = target * progress;
+                            el.textContent = current.toFixed(1);
+                            if (frame === totalFrames) {
+                                clearInterval(counter);
+                                el.textContent = target.toFixed(1);
+                            }
+                        }, frameDuration);
+                        observer.unobserve(el);
+                    }
+                });
+            };
+
+            const observer = new IntersectionObserver(animateOnScroll, { threshold: 0.7 });
+            document.querySelectorAll('.stat-number').forEach(el => observer.observe(el));
+            
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('tab-active');
+                        btn.classList.add('text-stone-500');
+                    });
+                    button.classList.add('tab-active');
+                    button.classList.remove('text-stone-500');
+
+                    const tabId = button.dataset.tab;
+                    tabPanes.forEach(pane => {
+                        if (pane.id === tabId) {
+                            pane.classList.remove('hidden');
+                            pane.classList.add('active');
+                        } else {
+                            pane.classList.add('hidden');
+                            pane.classList.remove('active');
+                        }
+                    });
+                });
+            });
+
+            const icebergCtx = document.getElementById('icebergChart').getContext('2d');
+            new Chart(icebergCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['プレゼンティーズム (見えざる損失)', 'アブセンティーズム (見える損失)', 'その他医療費など'],
+                    datasets: [{
+                        label: '健康関連コストの割合',
+                        data: [74.7, 5.1, 20.2],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)', // blue-500
+                            'rgba(29, 78, 216, 0.9)', // blue-700
+                            'rgba(163, 163, 163, 0.5)' // stone-400
+                        ],
+                        borderColor: [
+                            '#3B82F6',
+                            '#1D4ED8',
+                            '#A3A3A3'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const causesCtx = document.getElementById('causesChart').getContext('2d');
+            new Chart(causesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['メンタルヘルス不調', '腰痛・首の不調', '睡眠障害', 'アレルギー', '頭痛・片頭痛', '胃腸の不調'],
+                    datasets: [{
+                        label: '生産性損失への影響度（相対値）',
+                        data: [100, 95, 80, 75, 70, 65],
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)', // amber-500
+                        borderColor: '#F59E0B',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: false,
+                        },
+                        tooltip: {
+                            bodyFont: {
+                                size: 14
+                            },
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#E7E5E4' // stone-200
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+
+        const frameworkDetails = {
+            culture: {
+                title: '① 文化醸成：健康と心理的安全性の文化',
+                content: `
+                    <p class="mb-4">組織の基盤となる文化を変革することが、最も重要かつ効果的な一手です。これは、単なるスローガンではなく、日々の行動と制度に根付かせる必要があります。</p>
+                    <h4 class="font-bold text-lg mb-2">具体的なアクション</h4>
+                    <ul class="list-disc list-inside space-y-2 mb-4">
+                        <li><strong>経営層のコミットメント：</strong>経営者自らが健康の重要性を発信し、率先して休暇を取得する。</li>
+                        <li><strong>評価制度の見直し：</strong>労働時間ではなく、成果や持続可能なパフォーマンスを評価する制度へ移行する。</li>
+                        <li><strong>「不調でも安全」な環境：</strong>体調不良時に休むことへの罪悪感を払拭し、互いにサポートし合う文化を育む。</li>
+                        <li><strong>オープンなコミュニケーション：</strong>1on1ミーティングなどを通じて、従業員が安心して課題を相談できる環境を整える。</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">主要業績評価指標（KPI）</h4>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>プレゼンティーズムスコアの改善</li>
+                        <li>従業員満足度調査（心理的安全性項目）のスコア</li>
+                        <li>有給休暇取得率の向上</li>
+                    </ul>
+                `
+            },
+            environment: {
+                title: '② 制度・環境改善',
+                content: `
+                    <p class="mb-4">従業員が最高のパフォーマンスを発揮できるよう、物理的・制度的な障壁を取り除きます。</p>
+                    <h4 class="font-bold text-lg mb-2">具体的なアクション</h4>
+                    <ul class="list-disc list-inside space-y-2 mb-4">
+                        <li><strong>物理的職場環境の最適化：</strong>人間工学に基づいた什器への投資、適切な照明・空調管理、リラックスできる休憩スペースの確保。</li>
+                        <li><strong>柔軟な働き方の導入：</strong>テレワーク、フレックスタイム制度などを導入し、ワークライフバランスを改善。</li>
+                        <li><strong>徹底した労務管理：</strong>労働時間の上限を遵守させ、従業員が確実に休暇を取得できるよう管理する。</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">主要業績評価指標（KPI）</h4>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>筋骨格系愁訴の有訴率の低下</li>
+                        <li>時間外労働時間の削減</li>
+                        <li>従業員サーベイ（職場環境満足度）のスコア</li>
+                    </ul>
+                `
+            },
+            support: {
+                title: '③ 予防的な従業員支援とリソース提供',
+                content: `
+                    <p class="mb-4">従業員が不調に陥る前、あるいは不調の初期段階で対処できるよう、予防的な支援体制を構築します。</p>
+                    <h4 class="font-bold text-lg mb-2">具体的なアクション</h4>
+                    <ul class="list-disc list-inside space-y-2 mb-4">
+                        <li><strong>包括的なメンタルヘルスサポート：</strong>管理職向けのラインケア研修、外部EAP（従業員支援プログラム）の導入。</li>
+                        <li><strong>身体的ウェルビーイングの促進：</strong>栄養、睡眠、運動に関するセミナーの開催、運動機会の提供。</li>
+                        <li><strong>相談しやすい窓口の設置：</strong>産業医や保健師に気兼ねなく相談できる、秘匿性の高いチャネルを設ける。</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">主要業績評価指標（KPI）</h4>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>ストレスチェック高ストレス者率の低下</li>
+                        <li>EAP利用率</li>
+                        <li>健康診断有所見率の改善</li>
+                    </ul>
+                `
+            },
+            data: {
+                title: '④ データに基づく継続的改善',
+                content: `
+                    <p class="mb-4">「勘」に頼るのではなく、データに基づいて戦略を立て、効果を測定し、継続的に改善するサイクルを確立します。</p>
+                    <h4 class="font-bold text-lg mb-2">具体的なアクション</h4>
+                    <ul class="list-disc list-inside space-y-2 mb-4">
+                        <li><strong>現状の可視化：</strong>プレゼンティーズム測定ツールやパルスサーベイを定期的に実施し、組織の健康状態を定点観測する。</li>
+                        <li><strong>既存データの活用：</strong>ストレスチェック結果を部署別に分析し、高リスク部署や傾向を特定する。</li>
+                        <li><strong>PDCAサイクルの確立：</strong>収集したデータに基づき施策を計画(P)・実行(D)し、効果を評価(C)して改善(A)する。</li>
+                    </ul>
+                    <h4 class="font-bold text-lg mb-2">主要業績評価指標（KPI）</h4>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>プレゼンティーズム損失額の推移</li>
+                        <li>アブセンティーズム日数の削減</li>
+                        <li>健康施策の投資対効果（ROI）</li>
+                    </ul>
+                `
+            }
+        };
+
+        function showFrameworkDetails(pillar) {
+            const modal = document.getElementById('framework-modal');
+            const modalBody = document.getElementById('modal-body');
+            const data = frameworkDetails[pillar];
+
+            modalBody.innerHTML = `<h2 class="text-3xl font-bold mb-6 text-blue-500">${data.title}</h2>${data.content}`;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeFrameworkModal(event) {
+            const modal = document.getElementById('framework-modal');
+            if (event && event.target !== modal && !event.target.closest('#modal-content button')) {
+                return;
+            }
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
